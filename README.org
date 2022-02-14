@@ -1,0 +1,26 @@
+* bspdd
+  Dynamic desktops and monitors management for [[https://github.com/baskerville/bspwm][bspwm]].
+  The behavior is expected to be identical to [[https://i3wm.org/][i3]]'s workspaces.
+
+** Installation
+   #+begin_src shell-script
+     make install
+   #+end_src
+
+** Usage
+   Add the following to your ~bspwmrc~:
+   #+begin_src shell-script
+     bspdd daemon &
+   #+end_src
+
+   Commands:
+   | ~bspdd cleanup~            | cleanup desktops now                                  |
+   | ~bspdd daemon~             | automatically cleanup desktops when needed            |
+   | ~bspdd new~                | create a new numerically named desktop and move to it |
+   | ~bspdd prepare <NUM>~      | create a desktop if it does not exist                 |
+   | ~bspdd node-move <NUM>~    | move current node to desktop NUM                      |
+   | ~bspdd node-move-go <NUM>~ | move current node to desktop NUM and go there         |
+   | ~bspdd <1-10>¦next¦prev~   | move to that desktop                                  |
+
+** License
+   GPL3

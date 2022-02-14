@@ -1,0 +1,133 @@
+#!/bin/sh
+
+# Copyright (C) 2022-present naheel-azawy
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+isnum() {
+    [ "$1" -eq "$1" ] 2>/dev/null
+}
+
+prepare() {
+    # create if not there
+    bspc query -D -d "$1" >/dev/null 2>/dev/null ||
+        bspc monitor -a "$1" >/dev/null
+}
+
+cleanup() {
+    # remove empty desktops
+    cur=$(bspc query -D -d .focused --names)
+    bspc query -D -d .!occupied --names |
+        grep -v "^$cur\$" |
+        xargs -d '\n' -I {} bspc desktop {} -r
+
+    # rename non-numeric desktops
+    bspc query -D --names | while read -r desk; do
+        if ! isnum "$desk"; then
+            n=$(new_name) || continue
+            bspc desktop "$desk" --rename "$n"
+        fi
+    done
+
+    # re-order desktops names
+    bspc query -M --names | while read -r mon; do
+        names=$(bspc query -D -m "$mon" --names |
+                    sort -n | uniq | xargs)
+        eval "bspc monitor $mon -o $names"
+    done
+}
+
+new_name() {
+    for num in $(seq 1 10); do
+        if ! bspc query -D -d "$num" >/dev/null 2>/dev/null; then
+            echo "$num"
+            return 0
+        fi
+    done
+    return 1
+}
+
+new() {
+    cur=$(bspc query -D -d .focused --names)
+    bspc query -D -d "$cur.!occupied" >/dev/null && return 1
+    new=$(new_name) || return 1
+    prepare "$new"
+    bspc desktop -f "$new"
+    cleanup
+}
+
+daemon() {
+    bspc config remove_disabled_monitors   true
+    bspc config remove_unplugged_monitors  true
+    bspc config merge_overlapping_monitors true
+
+    prepare 1 && bspc desktop -f 1
+    cleanup
+
+    bspc subscribe \
+         monitor_add monitor_remove \
+         desktop_add desktop_remove |
+        while read -r _; do
+            sleep .5
+            cleanup
+        done 2>/dev/null
+}
+
+help() {
+    SELF=$(basename "$0")
+    echo "usage: $SELF [CMD]"
+    echo 'Commands:'
+    echo ' cleanup             cleanup desktops now'
+    echo ' daemon              automatically cleanup desktops when needed'
+    echo ' new                 create a new numerically named desktop and move to it'
+    echo ' prepare <NUM>       create a desktop if it does not exist'
+    echo ' node-move <NUM>     move current node to desktop NUM'
+    echo ' node-move-go <NUM>  move current node to desktop NUM and go there'
+    echo ' <1-10>|next|prev    move to that desktop'
+}
+
+main() {
+    case "$1" in
+        daemon)  daemon       ;;
+        cleanup) cleanup      ;;
+        new)     new          ;;
+        prepare) prepare "$2" ;;
+
+        node-move)
+            prepare "$2" &&
+                bspc node -d "$2"
+            cleanup ;;
+
+        node-move-go)
+            prepare "$2" &&
+                bspc node -d "$2" &&
+                bspc desktop -f "$2"
+            cleanup ;;
+
+        [1-9]|10)
+            prepare "$1" &&
+                bspc desktop -f "$1"
+            cleanup ;;
+
+        next|prev)
+            prepare "$1" &&
+                bspc desktop -f "$1".occupied
+            cleanup ;;
+
+        *)
+            help
+    esac
+}
+
+main "$@"
