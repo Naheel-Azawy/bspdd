@@ -5,4 +5,4 @@ install:
 	cp -f bspdd $(DESTDIR)$(PREFIX)
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/fmz
+	rm -f $(DESTDIR)$(PREFIX)/bspdd
