@@ -76,8 +76,8 @@ daemon() {
     cleanup
 
     bspc subscribe \
-         monitor_add monitor_remove \
-         desktop_add desktop_remove |
+         monitor_add monitor_remove monitor_focus \
+         desktop_add desktop_remove desktop_focus |
         while read -r _; do
             sleep .5
             cleanup
