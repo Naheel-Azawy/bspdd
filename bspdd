@@ -111,8 +111,7 @@ main() {
 
         node-move-go)
             prepare "$2" &&
-                bspc node -d "$2" &&
-                bspc desktop -f "$2"
+                bspc node -d "$2" --follow
             cleanup ;;
 
         [1-9]|10)
