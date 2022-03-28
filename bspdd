@@ -91,6 +91,7 @@ help() {
     echo ' cleanup             cleanup desktops now'
     echo ' daemon              automatically cleanup desktops when needed'
     echo ' new                 create a new numerically named desktop and move to it'
+    echo ' new-name            print a new desktop name'
     echo ' prepare <NUM>       create a desktop if it does not exist'
     echo ' node-move <NUM>     move current node to desktop NUM'
     echo ' node-move-go <NUM>  move current node to desktop NUM and go there'
@@ -99,10 +100,11 @@ help() {
 
 main() {
     case "$1" in
-        daemon)  daemon       ;;
-        cleanup) cleanup      ;;
-        new)     new          ;;
-        prepare) prepare "$2" ;;
+        daemon)   daemon       ;;
+        cleanup)  cleanup      ;;
+        new)      new          ;;
+        new-name) new_name     ;;
+        prepare)  prepare "$2" ;;
 
         node-move)
             prepare "$2" &&
