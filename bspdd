@@ -49,7 +49,7 @@ cleanup() {
 }
 
 new_name() {
-    for num in $(seq 1 10); do
+    for num in $(seq 1 100); do
         if ! bspc query -D -d "$num" >/dev/null 2>/dev/null; then
             echo "$num"
             return 0
@@ -65,6 +65,26 @@ new() {
     prepare "$new"
     bspc desktop -f "$new"
     cleanup
+}
+
+new_reorder() {
+    cur=$(bspc query -D -d .focused --names)
+    i=0
+    bspc query -D | while read -r d; do
+        i=$((i + 1))
+        bspc desktop "$d" --rename "$i"
+        if [ "$i" = "$cur" ]; then
+            i=$((i + 1))
+        fi
+    done
+
+    new=$((cur + 1))
+    prepare "$new" &&
+        if [ "$1" = move ]; then
+            bspc node -d "$new" --follow
+        else
+            bspc desktop -f "$new"
+        fi
 }
 
 daemon() {
@@ -92,19 +112,23 @@ help() {
     echo ' daemon              automatically cleanup desktops when needed'
     echo ' new                 create a new numerically named desktop and move to it'
     echo ' new-name            print a new desktop name'
+    echo ' new-reorder         create a new desktop and reorder all desktops'
+    echo ' new-reorder-move    move current node to the newly created desktop'
     echo ' prepare <NUM>       create a desktop if it does not exist'
     echo ' node-move <NUM>     move current node to desktop NUM'
     echo ' node-move-go <NUM>  move current node to desktop NUM and go there'
-    echo ' <1-10>|next|prev    move to that desktop'
+    echo ' <1-99>|next|prev    move to that desktop'
 }
 
 main() {
     case "$1" in
-        daemon)   daemon       ;;
-        cleanup)  cleanup      ;;
-        new)      new          ;;
-        new-name) new_name     ;;
-        prepare)  prepare "$2" ;;
+        daemon)           daemon           ;;
+        cleanup)          cleanup          ;;
+        new)              new              ;;
+        new-name)         new_name         ;;
+        new-reorder)      new_reorder      ;;
+        new-reorder-move) new_reorder move ;;
+        prepare)          prepare "$2"     ;;
 
         node-move)
             prepare "$2" &&
@@ -116,7 +140,7 @@ main() {
                 bspc node -d "$2" --follow
             cleanup ;;
 
-        [1-9]|10)
+        [1-9]|[1-9][0-9])
             prepare "$1" &&
                 bspc desktop -f "$1"
             cleanup ;;
