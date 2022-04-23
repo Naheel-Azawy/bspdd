@@ -19,6 +19,18 @@ isnum() {
     [ "$1" -eq "$1" ] 2>/dev/null
 }
 
+reorder() {
+    jump_after="$1"
+    i=0
+    bspc query -D | while read -r d; do
+        i=$((i + 1))
+        bspc desktop "$d" --rename "$i"
+        if [ "$i" = "$jump_after" ]; then
+            i=$((i + 1))
+        fi
+    done
+}
+
 prepare() {
     # create if not there
     bspc query -D -d "$1" >/dev/null 2>/dev/null ||
@@ -46,6 +58,9 @@ cleanup() {
                     sort -n | uniq | xargs)
         eval "bspc monitor $mon -o $names"
     done
+
+    # numerical reorder
+    [ -n "$BSPDD_NUM_REORDER" ] && reorder
 }
 
 new_name() {
@@ -60,31 +75,22 @@ new_name() {
 
 new() {
     cur=$(bspc query -D -d .focused --names)
-    bspc query -D -d "$cur.!occupied" >/dev/null && return 1
-    new=$(new_name) || return 1
-    prepare "$new"
-    bspc desktop -f "$new"
-    cleanup
-}
 
-new_reorder() {
-    cur=$(bspc query -D -d .focused --names)
-    i=0
-    bspc query -D | while read -r d; do
-        i=$((i + 1))
-        bspc desktop "$d" --rename "$i"
-        if [ "$i" = "$cur" ]; then
-            i=$((i + 1))
-        fi
-    done
+    if [ -n "$BSPDD_NUM_REORDER" ]; then
+        reorder "$cur"
+        new=$((cur + 1))
+    else
+        bspc query -D -d "$cur.!occupied" >/dev/null && return 1
+        new=$(new_name) || return 1
+    fi
 
-    new=$((cur + 1))
     prepare "$new" &&
         if [ "$1" = move ]; then
             bspc node -d "$new" --follow
         else
             bspc desktop -f "$new"
         fi
+    cleanup
 }
 
 daemon() {
@@ -101,7 +107,7 @@ daemon() {
         while read -r _; do
             sleep .5
             cleanup
-        done 2>/dev/null
+        done #2>/dev/null
 }
 
 help() {
@@ -111,9 +117,8 @@ help() {
     echo ' cleanup             cleanup desktops now'
     echo ' daemon              automatically cleanup desktops when needed'
     echo ' new                 create a new numerically named desktop and move to it'
+    echo ' new-move            move current node to the newly created desktop'
     echo ' new-name            print a new desktop name'
-    echo ' new-reorder         create a new desktop and reorder all desktops'
-    echo ' new-reorder-move    move current node to the newly created desktop'
     echo ' prepare <NUM>       create a desktop if it does not exist'
     echo ' node-move <NUM>     move current node to desktop NUM'
     echo ' node-move-go <NUM>  move current node to desktop NUM and go there'
@@ -126,8 +131,7 @@ main() {
         cleanup)          cleanup          ;;
         new)              new              ;;
         new-name)         new_name         ;;
-        new-reorder)      new_reorder      ;;
-        new-reorder-move) new_reorder move ;;
+        new-move)         new move         ;;
         prepare)          prepare "$2"     ;;
 
         node-move)
