@@ -19,6 +19,14 @@ isnum() {
     [ "$1" -eq "$1" ] 2>/dev/null
 }
 
+reorder_mon() {
+    bspc query -M --names | while read -r mon; do
+        names=$(bspc query -D -m "$mon" --names |
+                    sort -n | uniq | xargs)
+        eval "bspc monitor $mon -o $names"
+    done
+}
+
 reorder() {
     jump_after="$1"
     i=0
@@ -53,11 +61,7 @@ cleanup() {
     done
 
     # re-order desktops names
-    bspc query -M --names | while read -r mon; do
-        names=$(bspc query -D -m "$mon" --names |
-                    sort -n | uniq | xargs)
-        eval "bspc monitor $mon -o $names"
-    done
+    reorder_mon
 
     # numerical reorder
     [ -n "$BSPDD_NUM_REORDER" ] && reorder
@@ -85,6 +89,9 @@ new() {
     fi
 
     prepare "$new" &&
+        if [ -n "$BSPDD_NUM_REORDER" ]; then
+            reorder_mon
+        fi &&
         if [ "$1" = move ]; then
             bspc node -d "$new" --follow
         else
@@ -133,6 +140,7 @@ main() {
         new-name)         new_name         ;;
         new-move)         new move         ;;
         prepare)          prepare "$2"     ;;
+        reorder)          reorder "$2"     ;;
 
         node-move)
             prepare "$2" &&
